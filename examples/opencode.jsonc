@@ -35,8 +35,12 @@
       "models": {
         "Qwen/Qwen3.6-35B-A3B-FP8": {
           "name": "LLMaaS Qwen3.6-35B-A3B FULL-THINK",
+          // `limit.output` is the analog of Continue's `defaultCompletionOptions.maxTokens`:
+          // it caps the actual `maxOutputTokens` sent on every request for this model.
+          // (There's no per-agent output-token cap in opencode, unlike temperature/top_p.)
           "limit": {
             "context": 262144,
+            "output": 8192,
           },
           "options": {
             // Provider-specific request body passthrough, equivalent to Continue's
@@ -60,9 +64,6 @@
       "model": "muster-litellm/Qwen/Qwen3.6-35B-A3B-FP8",
       "temperature": 0.2,
       "top_p": 0.8,
-      "options": {
-        "maxTokens": 8192,
-      },
     },
   },
 

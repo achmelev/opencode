@@ -1,0 +1,79 @@
+{
+  // Analog of config.yaml (a Continue.dev config) for opencode.
+  //
+  // Mapping notes:
+  // - Continue's top-level `name`/`version`/`schema` have no opencode equivalent.
+  //   The assistant identity instead becomes a named custom agent below ("muster").
+  // - Continue's YAML anchors (`requestOptions_common`, `api_common`) are just YAML
+  //   reuse; opencode has no anchor mechanism, so the shared apiBase/apiKey/headers
+  //   are written once on the provider and inherited by every model under it.
+  // - `${{ secrets.X }}` becomes opencode's `{env:X}` substitution syntax.
+  // - `verifySsl` has no opencode config equivalent (TLS verification isn't
+  //   configurable per-provider) and is intentionally dropped.
+  // - A Continue "rule" with `invokable: true` is user-triggered, which matches
+  //   opencode's `command` concept (a `/name` slash command) much more closely
+  //   than opencode's always-on `instructions` field would.
+  "$schema": "https://opencode.ai/config.json",
+
+  "default_agent": "muster",
+
+  "provider": {
+    "muster-litellm": {
+      "name": "Muster LiteLLM Gateway",
+      // Any OpenAI-compatible endpoint (like a LiteLLM proxy) uses this npm package.
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "{env:OPENAI_API_BASE_ENV}",
+        "apiKey": "{env:OPENAI_API_KEY_ENV}",
+        // Shared request headers, equivalent to Continue's `requestOptions_common` anchor.
+        "headers": {
+          "User-Agent": "continue-dev",
+          "x-litellm-customer-id": "Muster GmbH",
+          "x-litellm-tags": "continue,ide,dev",
+        },
+      },
+      "models": {
+        "Qwen/Qwen3.6-35B-A3B-FP8": {
+          "name": "LLMaaS Qwen3.6-35B-A3B FULL-THINK",
+          "limit": {
+            "context": 262144,
+          },
+          "options": {
+            // Provider-specific request body passthrough, equivalent to Continue's
+            // `extraBodyProperties.chat_template_kwargs`.
+            "chat_template_kwargs": {
+              "enable_thinking": true,
+            },
+          },
+        },
+      },
+    },
+  },
+
+  "agent": {
+    // Named agent standing in for Continue's top-level assistant ("Muster Developer
+    // Assistant"). `temperature`/`top_p` are opencode agent fields (Continue keeps
+    // these on the model as `defaultCompletionOptions`).
+    "muster": {
+      "description": "Muster Developer Assistant",
+      "mode": "primary",
+      "model": "muster-litellm/Qwen/Qwen3.6-35B-A3B-FP8",
+      "temperature": 0.2,
+      "top_p": 0.8,
+      "options": {
+        "maxTokens": 8192,
+      },
+    },
+  },
+
+  "command": {
+    // Analog of the invokable "bteaminit" rule. opencode commands are explicitly
+    // triggered (e.g. `/agents-md-init`), matching Continue's `invokable: true`
+    // rule semantics. `{file:...}` inlines the howto guide directly into the
+    // command's prompt instead of telling the model to go read it itself.
+    "agents-md-init": {
+      "description": "Writing AGENTS.md for a new project",
+      "template": "You are starting work on a new Java project. Your first and only task right now is to create the file `AGENTS.md` in the root of the working directory. This file will serve as your \"memory\" for all future sessions on this project. Follow this guide on how to do it:\n\n{file:/prompts/AGENTS_HOWTO.md}",
+    },
+  },
+}

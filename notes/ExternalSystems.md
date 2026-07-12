@@ -9,7 +9,24 @@ on by default" and "opt-in."
 **1. models.dev — the model/provider catalog.** `models.dev` (overridable via
 `OPENCODE_MODELS_URL`, `packages/core/src/models-dev.ts:138`) is fetched to populate
 pricing, context/output limits, and capability metadata for the ~75+ built-in providers —
-this is where the catalog defaults described in `notes/ModelLimits.md` come from.
+this is where the catalog defaults described in `notes/ModelLimits.md` come from. Also
+fetched periodically in the background every 60 minutes (`models-dev.ts:233-236`), not just
+once at startup.
+
+**Disabling it**: set `OPENCODE_DISABLE_MODELS_FETCH=1` (`models-dev.ts:29` in
+`flag/flag.ts`). This skips both the initial fetch and the 60-minute refresh loop
+(`models-dev.ts:200,233`). What fills the catalog instead, in order: an existing local
+cache file (`Global.Path.cache/models.json` from a previous fetch), then a build-time
+embedded snapshot (`OPENCODE_MODELS_DEV` global) if one exists, then finally an empty `{}`
+catalog if neither is present — so it's "no network call," not necessarily "guaranteed
+empty" unless you also clear any stale cache first. When the catalog does resolve to `{}`,
+every provider/model comes purely from your own `provider` config (same merge logic as
+`notes/ModelLimits.md`) — including `limit.context`/`limit.output`, which default to `0`
+for any model you don't set them on explicitly, since there's no catalog fallback for
+*any* model anymore. `OPENCODE_MODELS_PATH` is the more deterministic alternative: it
+points the loader at a local JSON file instead of the network, with no cache/snapshot
+ambiguity. Neither of these stops the network calls in item 3 below (npm) or elsewhere —
+they're specific to the models.dev catalog only.
 
 **2. Auto-update check.** Every time the interactive TUI starts (`cli/tui/worker.ts:61`
 calls `upgrade()`), opencode checks for a newer version — and **for patch releases, can
@@ -89,7 +106,7 @@ only, not internet.
 
 | System | Default state | What it sends |
 |---|---|---|
-| models.dev | automatic | none (read-only catalog fetch) |
+| models.dev | automatic, plus 60-min background refresh; disable with `OPENCODE_DISABLE_MODELS_FETCH=1` or redirect with `OPENCODE_MODELS_PATH` | none (read-only catalog fetch) |
 | Update check / self-upgrade | automatic | version string; may download+install a new binary |
 | npm registry | automatic (per project dir) | package name/version requests |
 | Session sharing (`opncd.ai`) | capability available by default; upload only on explicit manual share or `share: "auto"` | session + message content |

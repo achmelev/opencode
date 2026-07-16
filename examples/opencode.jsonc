@@ -13,9 +13,11 @@
   // - A Continue "rule" with `invokable: true` is user-triggered, which matches
   //   opencode's `command` concept (a `/name` slash command) much more closely
   //   than opencode's always-on `instructions` field would.
+  // - Instead of a standalone custom agent set as `default_agent`, the built-in
+  //   `build`/`plan` agents are customized directly (model/temperature/top_p) —
+  //   `build` is already opencode's default primary agent, so no `default_agent`
+  //   override is needed.
   "$schema": "https://opencode.ai/config.json",
-
-  "default_agent": "muster",
 
   "provider": {
     "muster-litellm": {
@@ -55,12 +57,17 @@
   },
 
   "agent": {
-    // Named agent standing in for Continue's top-level assistant ("Muster Developer
-    // Assistant"). `temperature`/`top_p` are opencode agent fields (Continue keeps
-    // these on the model as `defaultCompletionOptions`).
-    "muster": {
-      "description": "Muster Developer Assistant",
-      "mode": "primary",
+    // Customizes the built-in `build`/`plan` agents in place instead of defining a
+    // standalone custom agent — each key here is merged onto the matching built-in's
+    // predefined defaults (permissions, description, mode, etc. are all preserved).
+    // `temperature`/`top_p` are opencode agent fields (Continue keeps these on the
+    // model as `defaultCompletionOptions`).
+    "build": {
+      "model": "muster-litellm/Qwen/Qwen3.6-35B-A3B-FP8",
+      "temperature": 0.2,
+      "top_p": 0.8,
+    },
+    "plan": {
       "model": "muster-litellm/Qwen/Qwen3.6-35B-A3B-FP8",
       "temperature": 0.2,
       "top_p": 0.8,
